@@ -158,32 +158,27 @@ function Write-PackageContents {
         [string]$TagName
     )
 
-    $lines = @(
-        '<?xml version="1.0" encoding="utf-8"?>'
-        '<ApplicationPackage'
-        '    SchemaVersion="1.0"'
-        "    AppVersion=`"$TagName`""
-        '    ProductCode="{F7E8D3A1-5B2C-4D6E-9F0A-1B3C5D7E9F0A}"'
-        '    Name="BMFrameGenCAD"'
-        '    Description="beMatrix Frame Generator for AutoCAD"'
-        '    Author="EJL Design">'
-        ''
-        '    <CompanyDetails Name="EJL Design" />'
-        ''
-        '    <Components>'
-        '        <RuntimeRequirements OS="Win64" Platform="AutoCAD" />'
-        '        <ComponentEntry AppName="BMFrameGenCAD"'
-        "                        Version=`"$TagName`""
-        "                        ModuleName=`"./Contents/$PluginName.dll`""
-        '                        AppType="Net"'
-        '                        LoadOnAutoCADStartup="True" />'
-        '    </Components>'
-        ''
-        '</ApplicationPackage>'
-    )
+    $xml = '<?xml version="1.0" encoding="utf-8"?>' + "`r`n"
+    $xml += '<ApplicationPackage' + "`r`n"
+    $xml += '    SchemaVersion="1.0"' + "`r`n"
+    $xml += '    AppVersion="' + $TagName + '"' + "`r`n"
+    $xml += '    ProductCode="{F7E8D3A1-5B2C-4D6E-9F0A-1B3C5D7E9F0A}"' + "`r`n"
+    $xml += '    Name="BMFrameGenCAD"' + "`r`n"
+    $xml += '    Description="beMatrix Frame Generator for AutoCAD"' + "`r`n"
+    $xml += '    Author="EJL Design">' + "`r`n"
+    $xml += '    <CompanyDetails Name="EJL Design" />' + "`r`n"
+    $xml += '    <Components>' + "`r`n"
+    $xml += '        <RuntimeRequirements OS="Win64" Platform="AutoCAD" />' + "`r`n"
+    $xml += '        <ComponentEntry AppName="BMFrameGenCAD"' + "`r`n"
+    $xml += '                        Version="' + $TagName + '"' + "`r`n"
+    $xml += '                        ModuleName="./Contents/' + $PluginName + '.dll"' + "`r`n"
+    $xml += '                        AppType="Net"' + "`r`n"
+    $xml += '                        LoadOnAutoCADStartup="True" />' + "`r`n"
+    $xml += '    </Components>' + "`r`n"
+    $xml += '</ApplicationPackage>'
 
-    $xmlPath = Join-Path $BundlePath "PackageContents.xml"
-    $lines -join "`r`n" | Set-Content $xmlPath -Encoding UTF8
+    $xmlPath = Join-Path $BundlePath 'PackageContents.xml'
+    Set-Content $xmlPath $xml -Encoding UTF8
 }
 
 function Test-Installation {
