@@ -25,7 +25,7 @@ trap {
 $RepoOwner   = "EJLDesign"
 $RepoName    = "BMFrameGen_release"
 $PluginName  = "BMFrameGenCAD"
-$InstallDir  = Join-Path $env:APPDATA "BMFrameGenCAD"
+$InstallDir  = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\BMFrameGenCAD"
 
 # -- Functions ----------------------------------------------------------------
 
