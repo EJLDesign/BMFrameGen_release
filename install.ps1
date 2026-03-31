@@ -172,7 +172,7 @@ function Write-PackageContents {
     $xml += '        <ComponentEntry AppName="BMFrameGenCAD"' + "`r`n"
     $xml += '                        Version="' + $TagName + '"' + "`r`n"
     $xml += '                        ModuleName="./Contents/' + $PluginName + '.dll"' + "`r`n"
-    $xml += '                        AppType="Net"' + "`r`n"
+    $xml += '                        AppType=".Net"' + "`r`n"
     $xml += '                        LoadOnAppStartup="True" />' + "`r`n"
     $xml += '    </Components>' + "`r`n"
     $xml += '</ApplicationPackage>'
