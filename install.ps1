@@ -6,7 +6,7 @@
     Detects installed AutoCAD versions, lets you choose which to install for,
     and sets up the plugin with autoloading and model library.
 .NOTES
-    Run with: irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\install-bmframegen.ps1"; & "$env:TEMP\install-bmframegen.ps1"
+    Run with: irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\bmfg-install.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\bmfg-install.ps1"
     Or: .\install.ps1
 #>
 

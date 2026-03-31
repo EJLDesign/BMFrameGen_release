@@ -7,7 +7,7 @@ beMatrix Frame Generator plugin for AutoCAD 2024+. Generates modular framing sys
 Open **PowerShell** and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\bmfg-install.ps1"; & "$env:TEMP\bmfg-install.ps1"
+irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\bmfg-install.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\bmfg-install.ps1"
 ```
 
 The installer will:
