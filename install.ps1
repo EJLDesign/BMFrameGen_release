@@ -3,8 +3,8 @@
 .SYNOPSIS
     BMFrameGenCAD Installer - Installs the beMatrix Frame Generator plugin for AutoCAD.
 .DESCRIPTION
-    Detects installed AutoCAD versions, lets you choose which to install for,
-    and sets up the plugin with autoloading and model library.
+    Detects installed AutoCAD versions, downloads the latest release,
+    places the DLL and model library, and registers for autoload via registry.
 .NOTES
     Run with: irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\bmfg-install.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\bmfg-install.ps1"
     Or: .\install.ps1
@@ -25,7 +25,7 @@ trap {
 $RepoOwner   = "EJLDesign"
 $RepoName    = "BMFrameGen_release"
 $PluginName  = "BMFrameGenCAD"
-$BundleName  = "$PluginName.bundle"
+$InstallDir  = Join-Path $env:APPDATA "BMFrameGenCAD"
 
 # -- Functions ----------------------------------------------------------------
 
@@ -47,18 +47,21 @@ function Get-InstalledAutoCADVersions {
     }
 
     Get-ChildItem $acadKey | ForEach-Object {
-        $versionKey = $_.PSPath
-        Get-ChildItem $versionKey | ForEach-Object {
-            $productKey = $_.PSPath
-            $productName = (Get-ItemProperty $productKey -ErrorAction SilentlyContinue).ProductName
-            $installPath = (Get-ItemProperty $productKey -ErrorAction SilentlyContinue).AcadLocation
+        $versionKey = $_
+        $versionId = $versionKey.PSChildName  # e.g. R25.0
+        Get-ChildItem $versionKey.PSPath | ForEach-Object {
+            $productKey = $_
+            $productId = $productKey.PSChildName  # e.g. ACAD-8101:409
+            $props = Get-ItemProperty $productKey.PSPath -ErrorAction SilentlyContinue
+            $productName = $props.ProductName
+            $installPath = $props.AcadLocation
 
             if ($productName -and $installPath -and (Test-Path $installPath)) {
                 $versions += [PSCustomObject]@{
                     Name        = $productName
-                    Version     = (Split-Path (Split-Path $versionKey -Leaf) -Leaf)
+                    VersionId   = $versionId
+                    ProductId   = $productId
                     InstallPath = $installPath
-                    RegistryKey = $productKey
                 }
             }
         }
@@ -93,18 +96,15 @@ function Install-Plugin {
         [string]$TagName
     )
 
-    $appPlugins = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins"
-    $bundlePath = Join-Path $appPlugins $BundleName
-
-    if (Test-Path $bundlePath) {
+    # Clean previous install
+    if (Test-Path $InstallDir) {
         Write-Host "  Removing previous installation..." -ForegroundColor Yellow
-        Remove-Item $bundlePath -Recurse -Force
+        Remove-Item $InstallDir -Recurse -Force
     }
 
-    New-Item -Path $bundlePath -ItemType Directory -Force | Out-Null
-    $contentsPath = Join-Path $bundlePath "Contents"
-    New-Item -Path $contentsPath -ItemType Directory -Force | Out-Null
+    New-Item -Path $InstallDir -ItemType Directory -Force | Out-Null
 
+    # Download and extract
     $tempZip = Join-Path $env:TEMP "$PluginName-$TagName.zip"
     Write-Host "  Downloading $TagName..." -ForegroundColor Gray
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $tempZip -UseBasicParsing
@@ -113,15 +113,18 @@ function Install-Plugin {
     if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
     Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
 
+    # Copy DLL
     $dll = Get-ChildItem $tempExtract -Filter "$PluginName.dll" -Recurse | Select-Object -First 1
     if (-not $dll) {
         throw "Could not find $PluginName.dll in the release archive."
     }
-    Copy-Item $dll.FullName -Destination $contentsPath
+    Copy-Item $dll.FullName -Destination $InstallDir
+    Write-Host "  Installed $PluginName.dll" -ForegroundColor Gray
 
+    # Copy Models
     $modelsSource = Get-ChildItem $tempExtract -Directory -Filter "Models" -Recurse | Select-Object -First 1
     if ($modelsSource) {
-        $modelsDest = Join-Path $contentsPath "Models"
+        $modelsDest = Join-Path $InstallDir "Models"
         Copy-Item $modelsSource.FullName -Destination $modelsDest -Recurse
         $modelCount = (Get-ChildItem $modelsDest -Filter "*.dwg").Count
         Write-Host "  Installed $modelCount model files." -ForegroundColor Gray
@@ -130,8 +133,9 @@ function Install-Plugin {
         Write-Host "  WARNING: No Models folder found in release." -ForegroundColor Yellow
     }
 
+    # Write model library path to settings
     $settingsFile = Join-Path $env:APPDATA "bmframegen_settings.txt"
-    $modelsPath = Join-Path $contentsPath "Models"
+    $modelsPath = Join-Path $InstallDir "Models"
     if (Test-Path $settingsFile) {
         $content = Get-Content $settingsFile -Raw
         if ($content -match "(?m)^LibraryPath=") {
@@ -146,48 +150,43 @@ function Install-Plugin {
         Set-Content $settingsFile "LibraryPath=$modelsPath"
     }
 
+    # Clean up temp files
     Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
     Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
-
-    return $bundlePath
 }
 
-function Write-PackageContents {
+function Register-AutoLoad {
     param(
-        [string]$BundlePath,
-        [string]$TagName
+        [array]$AutoCADVersions
     )
 
-    $xml = '<?xml version="1.0" encoding="utf-8"?>' + "`r`n"
-    $xml += '<ApplicationPackage' + "`r`n"
-    $xml += '    SchemaVersion="1.0"' + "`r`n"
-    $xml += '    AppVersion="' + $TagName + '"' + "`r`n"
-    $xml += '    ProductCode="{F7E8D3A1-5B2C-4D6E-9F0A-1B3C5D7E9F0A}"' + "`r`n"
-    $xml += '    Name="BMFrameGenCAD"' + "`r`n"
-    $xml += '    Description="beMatrix Frame Generator for AutoCAD"' + "`r`n"
-    $xml += '    Author="EJL Design">' + "`r`n"
-    $xml += '    <CompanyDetails Name="EJL Design" />' + "`r`n"
-    $xml += '    <Components Description="BMFrameGenCAD">' + "`r`n"
-    $xml += '        <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.0" />' + "`r`n"
-    $xml += '        <ComponentEntry AppName="BMFrameGenCAD"' + "`r`n"
-    $xml += '                        Version="' + $TagName + '"' + "`r`n"
-    $xml += '                        ModuleName="./Contents/' + $PluginName + '.dll"' + "`r`n"
-    $xml += '                        AppType=".Net"' + "`r`n"
-    $xml += '                        LoadOnAppStartup="True" />' + "`r`n"
-    $xml += '    </Components>' + "`r`n"
-    $xml += '</ApplicationPackage>'
+    $dllPath = Join-Path $InstallDir "$PluginName.dll"
+    $registered = 0
 
-    $xmlPath = Join-Path $BundlePath 'PackageContents.xml'
-    Set-Content $xmlPath $xml -Encoding UTF8
+    foreach ($acad in $AutoCADVersions) {
+        # Write to HKCU (no admin needed) - same structure as HKLM autoload
+        $regPath = "HKCU:\SOFTWARE\Autodesk\AutoCAD\$($acad.VersionId)\$($acad.ProductId)\Applications\$PluginName"
+
+        New-Item -Path $regPath -Force | Out-Null
+        Set-ItemProperty -Path $regPath -Name "DESCRIPTION" -Value "beMatrix Frame Generator for AutoCAD"
+        Set-ItemProperty -Path $regPath -Name "LOADCTRLS" -Value 2 -Type DWord
+        Set-ItemProperty -Path $regPath -Name "LOADER" -Value $dllPath
+        Set-ItemProperty -Path $regPath -Name "MANAGED" -Value 1 -Type DWord
+
+        Write-Host "  Registered autoload for $($acad.Name)" -ForegroundColor Green
+        $registered++
+    }
+
+    return $registered
 }
 
 function Test-Installation {
-    param([string]$BundlePath)
+    param([array]$AutoCADVersions)
 
     $ok = $true
-    $contentsPath = Join-Path $BundlePath "Contents"
 
-    $dllPath = Join-Path $contentsPath "$PluginName.dll"
+    # Check DLL
+    $dllPath = Join-Path $InstallDir "$PluginName.dll"
     if (Test-Path $dllPath) {
         Write-Host "  [OK] Plugin DLL installed" -ForegroundColor Green
     } else {
@@ -195,21 +194,26 @@ function Test-Installation {
         $ok = $false
     }
 
-    $xmlPath = Join-Path $BundlePath "PackageContents.xml"
-    if (Test-Path $xmlPath) {
-        Write-Host "  [OK] PackageContents.xml created" -ForegroundColor Green
-    } else {
-        Write-Host "  [FAIL] PackageContents.xml missing" -ForegroundColor Red
-        $ok = $false
-    }
-
-    $modelsPath = Join-Path $contentsPath "Models"
+    # Check Models
+    $modelsPath = Join-Path $InstallDir "Models"
     if ((Test-Path $modelsPath) -and (Get-ChildItem $modelsPath -Filter "*.dwg").Count -gt 0) {
         Write-Host "  [OK] Model library installed" -ForegroundColor Green
     } else {
         Write-Host "  [WARN] Model library missing or empty" -ForegroundColor Yellow
     }
 
+    # Check registry entries
+    foreach ($acad in $AutoCADVersions) {
+        $regPath = "HKCU:\SOFTWARE\Autodesk\AutoCAD\$($acad.VersionId)\$($acad.ProductId)\Applications\$PluginName"
+        if (Test-Path $regPath) {
+            Write-Host "  [OK] Registry entry for $($acad.Name)" -ForegroundColor Green
+        } else {
+            Write-Host "  [FAIL] Registry entry missing for $($acad.Name)" -ForegroundColor Red
+            $ok = $false
+        }
+    }
+
+    # Check settings
     $settingsFile = Join-Path $env:APPDATA "bmframegen_settings.txt"
     if (Test-Path $settingsFile) {
         Write-Host "  [OK] Settings configured" -ForegroundColor Green
@@ -229,23 +233,26 @@ $acadVersions = Get-InstalledAutoCADVersions
 
 if ($acadVersions.Count -eq 0) {
     Write-Host ""
-    Write-Host "  No AutoCAD installations detected." -ForegroundColor Yellow
-    Write-Host "  The plugin will be installed to the ApplicationPlugins folder." -ForegroundColor Yellow
-    Write-Host "  It will activate when AutoCAD is installed and launched." -ForegroundColor Yellow
+    Write-Host "  No AutoCAD installations detected." -ForegroundColor Red
+    Write-Host "  AutoCAD must be installed before running this installer." -ForegroundColor Red
     Write-Host ""
-}
-else {
-    Write-Host "  Found AutoCAD installations:" -ForegroundColor Green
-    foreach ($v in $acadVersions) {
-        Write-Host "    - $($v.Name)" -ForegroundColor White
-    }
-    Write-Host ""
+    Write-Host "  Press any key to exit..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
 }
 
+Write-Host "  Found AutoCAD installations:" -ForegroundColor Green
+foreach ($v in $acadVersions) {
+    Write-Host "    - $($v.Name)" -ForegroundColor White
+}
+Write-Host ""
+
+# Get latest release
 $release = Get-LatestRelease
 Write-Host "  Latest version: $($release.TagName)" -ForegroundColor Cyan
 Write-Host ""
 
+# Confirm
 Write-Host "  Install BMFrameGenCAD $($release.TagName)? (Y/n) " -ForegroundColor White -NoNewline
 $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 Write-Host $key.Character
@@ -258,23 +265,29 @@ if ($key.Character -eq 'n' -or $key.Character -eq 'N') {
 
 Write-Host ""
 
-$bundlePath = Install-Plugin -DownloadUrl $release.DownloadUrl -TagName $release.TagName
-Write-PackageContents -BundlePath $bundlePath -TagName $release.TagName
+# Install files
+Install-Plugin -DownloadUrl $release.DownloadUrl -TagName $release.TagName
 
+# Register autoload in registry for each detected AutoCAD version
+Write-Host ""
+Write-Host "  Registering plugin with AutoCAD..." -ForegroundColor Gray
+$regCount = Register-AutoLoad -AutoCADVersions $acadVersions
+
+# Verify
 Write-Host ""
 Write-Host "  Verifying installation..." -ForegroundColor Gray
-$passed = Test-Installation -BundlePath $bundlePath
+$passed = Test-Installation -AutoCADVersions $acadVersions
 
 Write-Host ""
 if ($passed) {
     Write-Host "  Installation complete!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  Plugin location: $bundlePath" -ForegroundColor Gray
+    Write-Host "  Plugin location: $InstallDir" -ForegroundColor Gray
+    Write-Host "  Registered for $regCount AutoCAD version(s)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Next steps:" -ForegroundColor Cyan
-    Write-Host "    1. Launch AutoCAD" -ForegroundColor White
-    Write-Host "    2. The plugin loads automatically on startup" -ForegroundColor White
-    Write-Host '    3. Type "BMFrameGen" in the command line to start' -ForegroundColor White
+    Write-Host "    1. Launch (or restart) AutoCAD" -ForegroundColor White
+    Write-Host '    2. Type "BMFrameGen" in the command line to start' -ForegroundColor White
     Write-Host ""
 }
 else {
