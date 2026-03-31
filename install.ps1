@@ -167,13 +167,13 @@ function Write-PackageContents {
     $xml += '    Description="beMatrix Frame Generator for AutoCAD"' + "`r`n"
     $xml += '    Author="EJL Design">' + "`r`n"
     $xml += '    <CompanyDetails Name="EJL Design" />' + "`r`n"
-    $xml += '    <Components>' + "`r`n"
-    $xml += '        <RuntimeRequirements OS="Win64" Platform="AutoCAD" />' + "`r`n"
+    $xml += '    <Components Description="BMFrameGenCAD">' + "`r`n"
+    $xml += '        <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.0" />' + "`r`n"
     $xml += '        <ComponentEntry AppName="BMFrameGenCAD"' + "`r`n"
     $xml += '                        Version="' + $TagName + '"' + "`r`n"
     $xml += '                        ModuleName="./Contents/' + $PluginName + '.dll"' + "`r`n"
     $xml += '                        AppType="Net"' + "`r`n"
-    $xml += '                        LoadOnAutoCADStartup="True" />' + "`r`n"
+    $xml += '                        LoadOnAppStartup="True" />' + "`r`n"
     $xml += '    </Components>' + "`r`n"
     $xml += '</ApplicationPackage>'
 
