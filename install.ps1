@@ -6,11 +6,21 @@
     Detects installed AutoCAD versions, lets you choose which to install for,
     and sets up the plugin with autoloading and model library.
 .NOTES
-    Run with: irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 | iex
+    Run with: irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\install-bmframegen.ps1"; & "$env:TEMP\install-bmframegen.ps1"
     Or: .\install.ps1
 #>
 
 $ErrorActionPreference = 'Stop'
+
+# Keep the window open on any error or exit
+trap {
+    Write-Host ""
+    Write-Host "  ERROR: $_" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  Press any key to exit..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
 
 # ── Config ──────────────────────────────────────────────────────────────────
 $RepoOwner   = "EJLDesign"
@@ -75,9 +85,7 @@ function Get-LatestRelease {
         }
     }
     catch {
-        Write-Host "  ERROR: Could not fetch latest release." -ForegroundColor Red
-        Write-Host "  $_" -ForegroundColor Red
-        exit 1
+        throw "Could not fetch latest release. Make sure a release exists at https://github.com/$RepoOwner/$RepoName/releases -- $_"
     }
 }
 
@@ -264,9 +272,13 @@ Write-Host "  Latest version: $($release.TagName)" -ForegroundColor Cyan
 Write-Host ""
 
 # Confirm
-$confirm = Read-Host "  Install BMFrameGenCAD $($release.TagName)? (Y/n)"
-if ($confirm -eq 'n' -or $confirm -eq 'N') {
+Write-Host "  Install BMFrameGenCAD $($release.TagName)? (Y/n) " -ForegroundColor White -NoNewline
+$key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Write-Host $key.Character
+if ($key.Character -eq 'n' -or $key.Character -eq 'N') {
     Write-Host "  Installation cancelled." -ForegroundColor Yellow
+    Write-Host "  Press any key to exit..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 0
 }
 
@@ -295,5 +307,7 @@ if ($passed) {
 }
 else {
     Write-Host "  Installation completed with errors. Check the messages above." -ForegroundColor Red
-    exit 1
 }
+
+Write-Host "  Press any key to exit..." -ForegroundColor Gray
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
