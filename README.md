@@ -21,15 +21,15 @@ No admin rights required.
 ## Manual Install
 
 1. Download the latest `.zip` from [Releases](https://github.com/EJLDesign/BMFrameGen_release/releases/latest)
-2. Extract to `%APPDATA%\Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle\Contents\`
-3. Copy `PackageContents.xml` from the release to the `.bundle` folder
-4. Launch AutoCAD — the plugin loads automatically
+2. Create folder `%APPDATA%\Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle\Contents\`
+3. Extract the DLL and Models folder into `Contents\`
+4. Launch AutoCAD — the plugin loads automatically via the bundle
 
 ## Usage
 
 1. Launch AutoCAD
 2. Type `BMFrameGen` in the command line
-3. Select your model library and frame options
+3. Configure frame options in the palette
 4. Select faces or volumes to frame
 
 ## Uninstall

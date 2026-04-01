@@ -25,7 +25,8 @@ trap {
 $RepoOwner   = "EJLDesign"
 $RepoName    = "BMFrameGen_release"
 $PluginName  = "BMFrameGenCAD"
-$InstallDir  = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\BMFrameGenCAD"
+$BundleDir   = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle"
+$InstallDir  = Join-Path $BundleDir "Contents"
 
 # -- Functions ----------------------------------------------------------------
 
@@ -97,12 +98,32 @@ function Install-Plugin {
     )
 
     # Clean previous install
-    if (Test-Path $InstallDir) {
+    if (Test-Path $BundleDir) {
         Write-Host "  Removing previous installation..." -ForegroundColor Yellow
-        Remove-Item $InstallDir -Recurse -Force
+        Remove-Item $BundleDir -Recurse -Force
     }
 
     New-Item -Path $InstallDir -ItemType Directory -Force | Out-Null
+
+    # Write PackageContents.xml for AutoCAD bundle autoload
+    $packageXml = @"
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0"
+  Name="BMFrameGenCAD"
+  Description="beMatrix Frame Generator for AutoCAD"
+  AppVersion="1.0.0"
+  ProductCode="{B4F2E8A1-7C3D-4E5F-9A1B-2D3E4F5A6B7C}">
+  <CompanyDetails Name="EJL Design"/>
+  <RuntimeRequirements OS="Win64" Platform="AutoCAD"/>
+  <Components>
+    <ComponentEntry AppName="BMFrameGenCAD"
+      ModuleName="./Contents/BMFrameGenCAD.dll"
+      AppType="Managed"
+      LoadOnAutoCADStartup="True"/>
+  </Components>
+</ApplicationPackage>
+"@
+    Set-Content (Join-Path $BundleDir "PackageContents.xml") $packageXml -Encoding UTF8
 
     # Download and extract
     $tempZip = Join-Path $env:TEMP "$PluginName-$TagName.zip"
@@ -282,7 +303,7 @@ Write-Host ""
 if ($passed) {
     Write-Host "  Installation complete!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  Plugin location: $InstallDir" -ForegroundColor Gray
+    Write-Host "  Plugin location: $BundleDir" -ForegroundColor Gray
     Write-Host "  Registered for $regCount AutoCAD version(s)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Next steps:" -ForegroundColor Cyan
