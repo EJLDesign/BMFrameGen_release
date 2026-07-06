@@ -6,7 +6,7 @@
     Detects installed AutoCAD versions, downloads the latest release,
     places the DLL and model library, and registers for autoload via registry.
 .NOTES
-    Run with: irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1 -OutFile "$env:TEMP\bmfg-install.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\bmfg-install.ps1"
+    Run with: iex (irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1)
     Or: .\install.ps1
 #>
 
@@ -97,10 +97,15 @@ function Install-Plugin {
         [string]$TagName
     )
 
-    # Clean previous install
+    # Clean previous install (wait for the delete to actually finish --
+    # Windows deletes are async and antivirus handles can delay them)
     if (Test-Path $BundleDir) {
         Write-Host "  Removing previous installation..." -ForegroundColor Yellow
         Remove-Item $BundleDir -Recurse -Force
+        for ($i = 0; $i -lt 25 -and (Test-Path $BundleDir); $i++) { Start-Sleep -Milliseconds 200 }
+        if (Test-Path $BundleDir) {
+            throw "Could not remove the previous installation at '$BundleDir'. Close AutoCAD and any Explorer windows in that folder, then run the installer again."
+        }
     }
 
     New-Item -Path $InstallDir -ItemType Directory -Force | Out-Null
@@ -125,14 +130,36 @@ function Install-Plugin {
 "@
     Set-Content (Join-Path $BundleDir "PackageContents.xml") $packageXml -Encoding UTF8
 
-    # Download and extract
-    $tempZip = Join-Path $env:TEMP "$PluginName-$TagName.zip"
+    # Best-effort cleanup of debris from older runs (never reuse these paths --
+    # a failed delete or an antivirus handle on them must not break this run)
+    Get-ChildItem $env:TEMP -Filter "$PluginName-extract*" -Directory -ErrorAction SilentlyContinue |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem $env:TEMP -Filter "$PluginName-v*.zip" -File -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+
+    # Download and extract, using paths unique to this run so leftovers from a
+    # previous attempt (possibly still locked by antivirus) can't collide
+    $runId = Get-Random
+    $tempZip = Join-Path $env:TEMP "$PluginName-$TagName-$runId.zip"
     Write-Host "  Downloading $TagName..." -ForegroundColor Gray
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $tempZip -UseBasicParsing
 
-    $tempExtract = Join-Path $env:TEMP "$PluginName-extract"
-    if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
-    Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+    # Extract with retries: antivirus scanners often hold just-written files
+    # briefly, which makes Expand-Archive fail spuriously
+    $tempExtract = Join-Path $env:TEMP "$PluginName-extract-$runId"
+    for ($attempt = 1; ; $attempt++) {
+        try {
+            Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+            break
+        }
+        catch {
+            if ($attempt -ge 3) { throw }
+            Write-Host "  Extraction attempt $attempt failed (antivirus may be scanning); retrying..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 3
+            Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+            $tempExtract = Join-Path $env:TEMP "$PluginName-extract-$runId-$attempt"
+        }
+    }
 
     # Copy DLL
     $dll = Get-ChildItem $tempExtract -Filter "$PluginName.dll" -Recurse | Select-Object -First 1
