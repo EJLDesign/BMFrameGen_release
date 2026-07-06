@@ -169,6 +169,20 @@ function Install-Plugin {
     Copy-Item $dll.FullName -Destination $InstallDir
     Write-Host "  Installed $PluginName.dll" -ForegroundColor Gray
 
+    # Copy assets (sheet-label symbol DWGs). SheetSymbolService loads these from
+    # <InstallDir>\assets\symbols\ at sheet-generation time; without them, sheets
+    # generate with viewports but no labels.
+    $assetsSource = Get-ChildItem $tempExtract -Directory -Filter "assets" -Recurse | Select-Object -First 1
+    if ($assetsSource) {
+        $assetsDest = Join-Path $InstallDir "assets"
+        Copy-Item $assetsSource.FullName -Destination $assetsDest -Recurse
+        $symbolCount = (Get-ChildItem (Join-Path $assetsDest "symbols") -Filter "*.dwg" -ErrorAction SilentlyContinue).Count
+        Write-Host "  Installed $symbolCount sheet-label symbol file(s)." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "  WARNING: No assets folder found in release -- sheet labels will not appear." -ForegroundColor Yellow
+    }
+
     # Copy Models
     $modelsSource = Get-ChildItem $tempExtract -Directory -Filter "Models" -Recurse | Select-Object -First 1
     if ($modelsSource) {
@@ -248,6 +262,14 @@ function Test-Installation {
         Write-Host "  [OK] Model library installed" -ForegroundColor Green
     } else {
         Write-Host "  [WARN] Model library missing or empty" -ForegroundColor Yellow
+    }
+
+    # Check sheet-label symbols
+    $symbolsPath = Join-Path $InstallDir "assets\symbols"
+    if ((Test-Path $symbolsPath) -and (Get-ChildItem $symbolsPath -Filter "*.dwg").Count -gt 0) {
+        Write-Host "  [OK] Sheet-label symbols installed" -ForegroundColor Green
+    } else {
+        Write-Host "  [WARN] Sheet-label symbols missing -- generated sheets will have no labels" -ForegroundColor Yellow
     }
 
     # Check registry entries
