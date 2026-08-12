@@ -182,6 +182,15 @@ function Install-Plugin {
         Write-Host "  NOTE: No license.lic in release -- existing license (if any) stays in effect." -ForegroundColor Yellow
     }
 
+    # Copy the End User License Agreement beside the DLL (human-readable copy;
+    # the plugin also carries the text embedded in the DLL). Best-effort: older
+    # archives without it must not break the install.
+    $eula = Get-ChildItem $tempExtract -Filter "EULA.txt" -Recurse | Select-Object -First 1
+    if ($eula) {
+        Copy-Item $eula.FullName -Destination $InstallDir
+        Write-Host "  Installed EULA.txt" -ForegroundColor Gray
+    }
+
     # Copy assets (sheet-label symbol DWGs). SheetSymbolService loads these from
     # <InstallDir>\assets\symbols\ at sheet-generation time; without them, sheets
     # generate with viewports but no labels.
