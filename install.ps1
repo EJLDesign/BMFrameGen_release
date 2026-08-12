@@ -169,6 +169,19 @@ function Install-Plugin {
     Copy-Item $dll.FullName -Destination $InstallDir
     Write-Host "  Installed $PluginName.dll" -ForegroundColor Gray
 
+    # Copy the site license beside the DLL. The plugin auto-imports a license.lic
+    # sitting next to the loaded DLL into %APPDATA%\BMFrameGen on startup, so
+    # plugin updates renew licenses silently. Best-effort: an archive without a
+    # license (older releases) must not break the install.
+    $lic = Get-ChildItem $tempExtract -Filter "license.lic" -Recurse | Select-Object -First 1
+    if ($lic) {
+        Copy-Item $lic.FullName -Destination $InstallDir
+        Write-Host "  Installed license.lic (auto-imports on first load)." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "  NOTE: No license.lic in release -- existing license (if any) stays in effect." -ForegroundColor Yellow
+    }
+
     # Copy assets (sheet-label symbol DWGs). SheetSymbolService loads these from
     # <InstallDir>\assets\symbols\ at sheet-generation time; without them, sheets
     # generate with viewports but no labels.
