@@ -133,7 +133,7 @@ function Install-Plugin {
 <?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage SchemaVersion="1.0"
   Name="TaylorFabStudio"
-  Description="TaylorFab Studio — Frame Generator for AutoCAD"
+  Description="TaylorFab Studio - Frame Generator for AutoCAD"
   AppVersion="1.0.0"
   ProductCode="{3B7AA669-9896-AB28-814B-0145E746B3DF}">
   <CompanyDetails Name="Taylor Manufacturing Industries Inc."/>
