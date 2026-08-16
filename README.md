@@ -1,13 +1,13 @@
-# BMFrameGenCAD
+# TaylorFab Studio
 
-beMatrix Frame Generator plugin for AutoCAD 2024+. Generates modular framing systems on 3D solid faces and volumes.
+TaylorFab Studio frame generator plugin for AutoCAD 2024+ (formerly BMFrameGenCAD). Generates full multi-wall modular framing towers, elevations, plan views, and composed sheets.
 
 ## Quick Install
 
 Open **PowerShell** and paste:
 
 ```powershell
-iex (irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1)
+iex (irm https://raw.githubusercontent.com/EJLDesign/TaylorFab_Studio_release/main/install.ps1)
 ```
 
 This runs the installer directly in memory — no temp script file, so antivirus scan locks on a downloaded file can't interrupt it.
@@ -16,23 +16,23 @@ The installer will:
 - Detect your installed AutoCAD version(s)
 - Download the latest release
 - Install the plugin with automatic loading
+- Install the current license file (imported silently on first load)
 - Set up the model library
 
 No admin rights required.
 
 ## Manual Install
 
-1. Download the latest `.zip` from [Releases](https://github.com/EJLDesign/BMFrameGen_release/releases/latest)
+1. Download the latest `.zip` from [Releases](https://github.com/EJLDesign/TaylorFab_Studio_release/releases/latest)
 2. Create folder `%APPDATA%\Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle\Contents\`
-3. Extract the DLL and Models folder into `Contents\`
+3. Extract the DLL, license, Models, and assets folders into `Contents\`
 4. Launch AutoCAD — the plugin loads automatically via the bundle
 
 ## Usage
 
 1. Launch AutoCAD
 2. Type `BMFrameGen` in the command line
-3. Configure frame options in the palette
-4. Select faces or volumes to frame
+3. Build towers from the palette and edit them with the Tower and Wall editors
 
 ## Uninstall
 
@@ -46,3 +46,4 @@ Delete the folder:
 - AutoCAD 2024 or later
 - Windows 10/11
 - .NET Framework 4.8 (included with Windows 10+)
+- A valid license file (contact evanl@taylorinc.com)

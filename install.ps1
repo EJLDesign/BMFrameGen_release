@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    BMFrameGenCAD Installer - Installs the beMatrix Frame Generator plugin for AutoCAD.
+    TaylorFab Studio Installer - Installs the TaylorFab Studio frame generator plugin for AutoCAD.
 .DESCRIPTION
     Detects installed AutoCAD versions, downloads the latest release,
     places the DLL and model library, and registers for autoload via registry.
 .NOTES
-    Run with: iex (irm https://raw.githubusercontent.com/EJLDesign/BMFrameGen_release/main/install.ps1)
+    Run with: iex (irm https://raw.githubusercontent.com/EJLDesign/TaylorFab_Studio_release/main/install.ps1)
     Or: .\install.ps1
 #>
 
@@ -23,7 +23,7 @@ trap {
 
 # -- Config -------------------------------------------------------------------
 $RepoOwner   = "EJLDesign"
-$RepoName    = "BMFrameGen_release"
+$RepoName    = "TaylorFab_Studio_release"
 $PluginName  = "BMFrameGenCAD"
 $BundleDir   = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle"
 $InstallDir  = Join-Path $BundleDir "Contents"
@@ -33,8 +33,8 @@ $InstallDir  = Join-Path $BundleDir "Contents"
 function Write-Banner {
     Write-Host ""
     Write-Host "  +--------------------------------------------+" -ForegroundColor Cyan
-    Write-Host "  |     BMFrameGenCAD Plugin Installer          |" -ForegroundColor Cyan
-    Write-Host "  |     beMatrix Frame Generator for AutoCAD    |" -ForegroundColor Cyan
+    Write-Host "  |     TaylorFab Studio Plugin Installer       |" -ForegroundColor Cyan
+    Write-Host "  |     Frame Generator for AutoCAD             |" -ForegroundColor Cyan
     Write-Host "  +--------------------------------------------+" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -115,7 +115,7 @@ function Install-Plugin {
 <?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage SchemaVersion="1.0"
   Name="BMFrameGenCAD"
-  Description="beMatrix Frame Generator for AutoCAD"
+  Description="TaylorFab Studio — Frame Generator for AutoCAD"
   AppVersion="1.0.0"
   ProductCode="{B4F2E8A1-7C3D-4E5F-9A1B-2D3E4F5A6B7C}">
   <CompanyDetails Name="EJL Design"/>
@@ -252,7 +252,7 @@ function Register-AutoLoad {
         $regPath = "HKCU:\SOFTWARE\Autodesk\AutoCAD\$($acad.VersionId)\$($acad.ProductId)\Applications\$PluginName"
 
         New-Item -Path $regPath -Force | Out-Null
-        Set-ItemProperty -Path $regPath -Name "DESCRIPTION" -Value "beMatrix Frame Generator for AutoCAD"
+        Set-ItemProperty -Path $regPath -Name "DESCRIPTION" -Value "TaylorFab Studio for AutoCAD"
         Set-ItemProperty -Path $regPath -Name "LOADCTRLS" -Value 2 -Type DWord
         Set-ItemProperty -Path $regPath -Name "LOADER" -Value $dllPath
         Set-ItemProperty -Path $regPath -Name "MANAGED" -Value 1 -Type DWord
@@ -345,7 +345,7 @@ Write-Host "  Latest version: $($release.TagName)" -ForegroundColor Cyan
 Write-Host ""
 
 # Confirm
-Write-Host "  Install BMFrameGenCAD $($release.TagName)? (Y/n) " -ForegroundColor White -NoNewline
+Write-Host "  Install TaylorFab Studio $($release.TagName)? (Y/n) " -ForegroundColor White -NoNewline
 $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 Write-Host $key.Character
 if ($key.Character -eq 'n' -or $key.Character -eq 'N') {
