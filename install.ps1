@@ -24,9 +24,13 @@ trap {
 # -- Config -------------------------------------------------------------------
 $RepoOwner   = "EJLDesign"
 $RepoName    = "TaylorFab_Studio_release"
-$PluginName  = "BMFrameGenCAD"
-$BundleDir   = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle"
+$PluginName  = "TaylorFabStudio"
+$BundleDir   = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\TaylorFabStudio.bundle"
 $InstallDir  = Join-Path $BundleDir "Contents"
+# Pre-rename (BMFrameGenCAD) install locations, removed on install so AutoCAD
+# never double-loads the old and new plugin side by side.
+$LegacyPluginName = "BMFrameGenCAD"
+$LegacyBundleDir  = Join-Path $env:APPDATA "Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle"
 
 # -- Functions ----------------------------------------------------------------
 
@@ -99,12 +103,26 @@ function Install-Plugin {
 
     # Clean previous install (wait for the delete to actually finish --
     # Windows deletes are async and antivirus handles can delay them)
-    if (Test-Path $BundleDir) {
-        Write-Host "  Removing previous installation..." -ForegroundColor Yellow
-        Remove-Item $BundleDir -Recurse -Force
-        for ($i = 0; $i -lt 25 -and (Test-Path $BundleDir); $i++) { Start-Sleep -Milliseconds 200 }
-        if (Test-Path $BundleDir) {
-            throw "Could not remove the previous installation at '$BundleDir'. Close AutoCAD and any Explorer windows in that folder, then run the installer again."
+    foreach ($dir in @($BundleDir, $LegacyBundleDir)) {
+        if (Test-Path $dir) {
+            Write-Host "  Removing previous installation at $dir..." -ForegroundColor Yellow
+            Remove-Item $dir -Recurse -Force
+            for ($i = 0; $i -lt 25 -and (Test-Path $dir); $i++) { Start-Sleep -Milliseconds 200 }
+            if (Test-Path $dir) {
+                throw "Could not remove the previous installation at '$dir'. Close AutoCAD and any Explorer windows in that folder, then run the installer again."
+            }
+        }
+    }
+
+    # Remove legacy per-product autoload registry entries (pre-rename BMFrameGenCAD).
+    # Leaving them would make AutoCAD try to load the deleted old DLL on startup.
+    Get-ChildItem "HKCU:\SOFTWARE\Autodesk\AutoCAD" -ErrorAction SilentlyContinue | ForEach-Object {
+        Get-ChildItem $_.PSPath -ErrorAction SilentlyContinue | ForEach-Object {
+            $legacyKey = Join-Path $_.PSPath "Applications\$LegacyPluginName"
+            if (Test-Path $legacyKey) {
+                Remove-Item $legacyKey -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Host "  Removed legacy autoload registry entry." -ForegroundColor Yellow
+            }
         }
     }
 
@@ -114,15 +132,15 @@ function Install-Plugin {
     $packageXml = @"
 <?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage SchemaVersion="1.0"
-  Name="BMFrameGenCAD"
+  Name="TaylorFabStudio"
   Description="TaylorFab Studio — Frame Generator for AutoCAD"
   AppVersion="1.0.0"
-  ProductCode="{B4F2E8A1-7C3D-4E5F-9A1B-2D3E4F5A6B7C}">
-  <CompanyDetails Name="EJL Design"/>
+  ProductCode="{3B7AA669-9896-AB28-814B-0145E746B3DF}">
+  <CompanyDetails Name="Taylor Manufacturing Industries Inc."/>
   <RuntimeRequirements OS="Win64" Platform="AutoCAD"/>
   <Components>
-    <ComponentEntry AppName="BMFrameGenCAD"
-      ModuleName="./Contents/BMFrameGenCAD.dll"
+    <ComponentEntry AppName="TaylorFabStudio"
+      ModuleName="./Contents/TaylorFabStudio.dll"
       AppType="Managed"
       LoadOnAutoCADStartup="True"/>
   </Components>
@@ -170,7 +188,7 @@ function Install-Plugin {
     Write-Host "  Installed $PluginName.dll" -ForegroundColor Gray
 
     # Copy the site license beside the DLL. The plugin auto-imports a license.lic
-    # sitting next to the loaded DLL into %APPDATA%\BMFrameGen on startup, so
+    # sitting next to the loaded DLL into %APPDATA%\TaylorFabStudio on startup, so
     # plugin updates renew licenses silently. Best-effort: an archive without a
     # license (older releases) must not break the install.
     $lic = Get-ChildItem $tempExtract -Filter "license.lic" -Recurse | Select-Object -First 1
@@ -217,8 +235,14 @@ function Install-Plugin {
         Write-Host "  WARNING: No Models folder found in release." -ForegroundColor Yellow
     }
 
-    # Write model library path to settings
-    $settingsFile = Join-Path $env:APPDATA "bmframegen_settings.txt"
+    # Write model library path to settings. Migrate the pre-rename settings file
+    # first so users keep their LED/elevation/tower preferences across the rename.
+    $settingsFile = Join-Path $env:APPDATA "taylorfabstudio_settings.txt"
+    $legacySettings = Join-Path $env:APPDATA "bmframegen_settings.txt"
+    if (-not (Test-Path $settingsFile) -and (Test-Path $legacySettings)) {
+        Copy-Item $legacySettings $settingsFile
+        Write-Host "  Migrated settings from bmframegen_settings.txt." -ForegroundColor Gray
+    }
     $modelsPath = Join-Path $InstallDir "Models"
     if (Test-Path $settingsFile) {
         $content = Get-Content $settingsFile -Raw
@@ -306,7 +330,7 @@ function Test-Installation {
     }
 
     # Check settings
-    $settingsFile = Join-Path $env:APPDATA "bmframegen_settings.txt"
+    $settingsFile = Join-Path $env:APPDATA "taylorfabstudio_settings.txt"
     if (Test-Path $settingsFile) {
         Write-Host "  [OK] Settings configured" -ForegroundColor Green
     } else {
@@ -379,7 +403,7 @@ if ($passed) {
     Write-Host ""
     Write-Host "  Next steps:" -ForegroundColor Cyan
     Write-Host "    1. Launch (or restart) AutoCAD" -ForegroundColor White
-    Write-Host '    2. Type "BMFrameGen" in the command line to start' -ForegroundColor White
+    Write-Host '    2. Type "TFAB" in the command line to start' -ForegroundColor White
     Write-Host ""
 }
 else {

@@ -24,21 +24,21 @@ No admin rights required.
 ## Manual Install
 
 1. Download the latest `.zip` from [Releases](https://github.com/EJLDesign/TaylorFab_Studio_release/releases/latest)
-2. Create folder `%APPDATA%\Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle\Contents\`
+2. Create folder `%APPDATA%\Autodesk\ApplicationPlugins\TaylorFabStudio.bundle\Contents\`
 3. Extract the DLL, license, Models, and assets folders into `Contents\`
 4. Launch AutoCAD — the plugin loads automatically via the bundle
 
 ## Usage
 
 1. Launch AutoCAD
-2. Type `BMFrameGen` in the command line
+2. Type `TFAB` in the command line
 3. Build towers from the palette and edit them with the Tower and Wall editors
 
 ## Uninstall
 
 Delete the folder:
 ```
-%APPDATA%\Autodesk\ApplicationPlugins\BMFrameGenCAD.bundle
+%APPDATA%\Autodesk\ApplicationPlugins\TaylorFabStudio.bundle
 ```
 
 ## Requirements
