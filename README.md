@@ -1,6 +1,8 @@
 # TaylorFab Studio
 
-TaylorFab Studio frame generator plugin for AutoCAD 2024+ (formerly BMFrameGenCAD). Generates full multi-wall modular framing towers, elevations, plan views, and composed sheets.
+TaylorFab Studio frame generator plugin for AutoCAD 2025+ (formerly BMFrameGenCAD). Generates full multi-wall modular framing towers, cabinets, elevations, plan views, and composed sheets.
+
+Releases ship two runtime flavors in one package — .NET 8 for AutoCAD 2025/2026 and .NET 10 for AutoCAD 2027+ — and each AutoCAD version automatically loads the right one. (AutoCAD 2024 and earlier: use release v9.x, the final version supporting them.)
 
 ## Quick Install
 
@@ -23,10 +25,14 @@ No admin rights required.
 
 ## Manual Install
 
+The installer is strongly recommended (it writes the version-gated bundle manifest). If installing by hand:
+
 1. Download the latest `.zip` from [Releases](https://github.com/EJLDesign/TaylorFab_Studio_release/releases/latest)
 2. Create folder `%APPDATA%\Autodesk\ApplicationPlugins\TaylorFabStudio.bundle\Contents\`
-3. Extract the DLL, license, Models, and assets folders into `Contents\`
-4. Launch AutoCAD — the plugin loads automatically via the bundle
+3. Create `Contents\net8\` and `Contents\net10\`; into EACH, copy that flavor's `TaylorFabStudio.dll` plus a copy of `license.lic`, `EULA.txt`, and the `assets\` folder (the plugin resolves these beside the loaded DLL)
+4. Copy `Models\` to `Contents\Models\`
+5. Copy a `PackageContents.xml` from a previous installer run (or run the installer once) — it gates `net8` to AutoCAD 2025/2026 and `net10` to 2027+
+6. Launch AutoCAD — the plugin loads automatically via the bundle
 
 ## Usage
 
@@ -43,7 +49,6 @@ Delete the folder:
 
 ## Requirements
 
-- AutoCAD 2024 or later
+- AutoCAD 2025 or later (2025/2026 use the bundled .NET 8 build; 2027+ uses the bundled .NET 10 build — no separate .NET install needed, AutoCAD ships its own runtime)
 - Windows 10/11
-- .NET Framework 4.8 (included with Windows 10+)
 - A valid license file (contact evanl@taylorinc.com)
